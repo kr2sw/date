@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Maze 3</title>
+</head>
+<body>
+X : <input id="txtX" type="number" value="30" style="width:50px">
+Y : <input id="txtY" type="number" value="30" style="width:50px">
+Z : <input id="txtZ" type="number" value="2" style="width:50px">
+Size : <input id="txtS" type="number" value="5" style="width:50px">
+<input onclick="draw()" type="button" value="미로" style="width:50px">
+<input onclick="road_draw()" type="button" value="탈출" style="width:50px"><br>
+<canvas id="maze"></canvas>
+<br/>
+<b>floor : <span id="floor" style="color:red">1</span></b>
+<br/>
+Key: left, right, up, down, floor up : A, floor down : Z
+
+<script type="text/javascript">
+var maze = {
+  start : function(x, y, z) {
+    maze.size = [z, x, y];
+    maze.init();
+	maze.make();
+  },
+  redraw : function() {
+  },
+  init : function() {
+    var z = maze.size[0];
+    var x = maze.size[1];
+    var y = maze.size[2];
+ 	maze.stack = [];
+	maze.road = [];
+	
+    for(var k = 0; k <= z; k ++){
+      maze.road[k] = [];
+	  for(var i = 0; i <= x; i ++){
+	    maze.road[k][i] = [];
+	    for(var j = 0; j <= y; j ++) {
+		  maze.road[k][i][j] = 0;
+	    }
+	  }
+	}
+    maze.road[1][1][1] = 1;
+	maze.road[z-1][x][y-1] = 1;
+  },
+  make : function() {
+	var cl = [1, 1, 1];
+	var mv = [];
+	function check(n, v) {
+		var c = [cl[0], cl[1], cl[2]];
+		c[n] += v;
+		if (c[n] < 0 || c[n] > maze.size[n]) return false;
+		return !maze.road[c[0]][c[1]][c[2]];
+	}
+	
+ 	while(1) {
+		var cnt = 0;
+		var ll = [];
+		for(var i = 0; i < 3; i++) {
+			if (check(i, -2)) mv[cnt++] = [i, -1];
+			if (check(i, 2)) mv[cnt++] = [i, 1];
+		}
+		if (cnt) {
+			if (cnt == 1) ll = mv[0];
+			else ll = mv[parseInt(Math.random() * cnt)];
+			
+			maze.stack.push([cl[0], cl[1], cl[2]]);
+			cl[ll[0]] += ll[1];
+			maze.road[cl[0]][cl[1]][cl[2]] = 1;
+			cl[ll[0]] += ll[1];
+			maze.road[cl[0]][cl[1]][cl[2]] = 1;
+
+			if (cl[0] == maze.size[0] - 1 
+			 && cl[1] == maze.size[1] - 1
+			 && cl[2] == maze.size[2] - 1) {
+				maze.stack.push([cl[0], cl[1], cl[2]]);
+				maze.sol = maze.stack.slice();
+			}
+		} else {
+			var ll = maze.stack.pop();
+			if (!maze.stack.length) break;
+			cl[0] = ll[0];
+			cl[1] = ll[1];
+			cl[2] = ll[2];
+		}
+	}
+  },
+  draw : function(z) {
+	var zz = maze.size[0];
+	var xx = maze.size[1];
+	var yy = maze.size[2];
+	
+	// background
+	canv.width = xx * gs + 1;
+	canv.height = yy * gs + 1;
+	
+	ctx.fillStyle = "black";
+	ctx.fillRect(0,0, canv.width, canv.height);
+
+	for(var x = 0; x <= xx; x++)
+		for(var y = 0; y <= yy; y++) {
+			if (maze.road[z][x][y]) {
+				ctx.fillStyle = "white";
+				ctx.fillRect(x * gs - (gs - 1), y * gs - (gs - 1), gs * 2 - 1, gs * 2 - 1);
+			}
+		}
+	for(var x = 0; x <= xx; x++)
+		for(var y = 0; y <= yy; y++) {
+			if (maze.road[z - 1][x][y]) {
+				ctx.strokeStyle = 'Red'; 
+				ctx.beginPath();
+				ctx.moveTo(x * gs , y * gs);
+				ctx.lineTo(x * gs + (gs - 1), y * gs + (gs - 1));
+				ctx.stroke();
+			}
+			if (maze.road[z + 1][x][y]) {
+				ctx.strokeStyle = 'Blue'; 
+				ctx.beginPath();
+				ctx.moveTo(x * gs , y * gs);
+				ctx.lineTo(x * gs - (gs - 1) , y * gs - (gs - 1));
+				ctx.stroke();
+			}
+		}
+	},
+  roadDraw : function(zz) {
+	ctx.strokeStyle = 'green'; 
+	for(var i = 1; i < maze.sol.length; i++) {
+		var z1 = maze.sol[i-1][0];
+		var x1 = maze.sol[i-1][1];
+		var y1 = maze.sol[i-1][2];
+		var z2 = maze.sol[i][0];
+		var x2 = maze.sol[i][1];
+		var y2 = maze.sol[i][2];
+		if (zz == z1 && zz == z2) {
+			ctx.beginPath();
+			ctx.moveTo(x1 * gs, y1 * gs);
+			ctx.lineTo(x2 * gs, y2 * gs);
+			ctx.stroke();
+		}
+	}
+	if (zz == maze.size[0] - 1) {
+		ctx.beginPath();
+		var x = maze.size[1] - 1;
+		var y = maze.size[2] - 1;
+		ctx.moveTo(x * gs, y * gs);
+		x = maze.size[1];
+		y = maze.size[2] - 1;
+		ctx.lineTo(x * gs, y * gs);
+		ctx.stroke();
+	}
+  }
+}
+
+var canv;
+var ctx;
+var gs = 10;
+var cx = 1;
+var cy = 1;
+var cz = 1;
+var sol = 0;
+function draw() {
+	var x = parseInt(document.getElementById("txtX").value) * 2;
+	var y = parseInt(document.getElementById("txtY").value) * 2;
+	var z = parseInt(document.getElementById("txtZ").value) * 2;
+	var s = parseInt(document.getElementById("txtS").value) * 2;
+	gs = s;
+	maze.start(x, y, z);
+	cx = 1;
+	cy = 1;
+	cz = 1;
+	sol = 0;
+	maze.draw(cz);
+	drawPlayer(0, 0);
+document.getElementById("floor").innerHTML = (cz +1) / 2;
+}
+
+function road_draw() {
+	sol = !sol;
+	if (sol) maze.roadDraw(cz);
+	else maze.draw(cz);
+	drawPlayer(0, 0);
+}
+
+window.onload = function(){
+	canv = document.getElementById("maze");	
+	ctx = canv.getContext("2d");
+
+	draw();
+		
+	document.addEventListener("keydown", keyPush);
+			
+	//gameInterval = setInterval(game, 1000 / 15);
+	//clearInterval(gameInterval);
+}
+
+function keyPush(evt){
+	if (cx == maze.size[1] && cy == maze.size[2] - 1) return;
+	//console.log(evt.keyCode);
+	var xv = yv = zv = 0;
+	switch(evt.keyCode){
+	case 37: // left
+		xv = -1;
+		break; 
+	case 38: // up
+		yv = -1;
+		break;
+	case 39: // right
+		xv = 1;
+		break;
+	case 40: // down
+		yv = 1;
+		break;
+	case 40: // down
+		yv = 1;
+		break;
+	case 65: // A
+		zv = 1;
+		break;
+	case 90: // Z
+		zv = -1;
+		break;
+	case 13: // enter
+		break;
+	}
+	if (maze.road[cz + zv][cx + xv][cy + yv]) {
+		if (zv) {
+			cz += zv * 2;
+			document.getElementById("floor").innerHTML = (cz +1) / 2;
+			maze.draw(cz);
+			if (sol) maze.roadDraw(cz);
+		}
+		drawPlayer(xv, yv);
+	}
+}
+
+function drawPlayer(xv, yv) {
+	var t = 4;
+	ctx.lineWidth = 2;
+	ctx.strokeStyle = "white";
+	ctx.strokeRect(cx * gs - t, cy * gs - t, t * 2, t * 2);
+	cx += xv;
+	cy += yv;
+	ctx.strokeStyle = "blue";
+	ctx.strokeRect(cx * gs - t, cy * gs - t, t * 2, t * 2);
+}
+</script>
+
+</body>
+</html>

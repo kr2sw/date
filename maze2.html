@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Maze2</title>
+</head>
+<body>
+X : <input id="txtX" type="number" value="30" style="width:50px">
+Y : <input id="txtY" type="number" value="30" style="width:50px">
+Size : <input id="txtS" type="number" value="5" style="width:50px">
+ <input onclick="draw()" type="button" value="미로" style="width:50px">
+<input onclick="road_draw()" type="button" value="탈출" style="width:50px"><br>
+<canvas id="maze"></canvas>
+<br/>
+<br/>
+Key: left, right, up, down
+
+<script type="text/javascript">
+var maze = {
+  start : function(x, y, s) {
+    maze.size = [x, y, s];
+    maze.init();
+	maze.make();
+	maze.draw();
+  },
+  redraw : function() {
+    maze.init();
+	maze.make();
+	maze.draw();
+  },
+  init : function() {
+    var x = maze.size[0];
+    var y = maze.size[1];
+	maze.stack = [];
+	maze.road = [];
+    for(var i = 0; i <= x; i ++){
+      maze.road[i] = [];
+      for(var j = 0; j <= y; j ++) {
+        maze.road[i][j] = 0;
+      }
+    }
+    maze.road[1][1] = 1;
+	maze.road[x][y-1] = 1;
+  },
+  make : function() {
+	var cl = [1, 1];
+	var mv = [];
+	function check(n, v) {
+		var c = [cl[0], cl[1]];
+		c[n] += v;
+		if (c[n] < 0 || c[n] > maze.size[n]) return false;
+		return !maze.road[c[0]][c[1]];
+	}
+	
+	// 1234 1243 1324 1342 1432 1423
+	// 2341 2314 2413 2431 2143 2134 
+	// 3412 3421 3241 3241 3142 3124
+	// 4123 4132 4213 4231 4312 4321
+ 	while(1) {
+		var cnt = 0;
+		var ll = [];
+		for(var i = 0; i < 2; i++) {
+			if (check(i, -2)) mv[cnt++] = [i, -1];
+			if (check(i, 2)) mv[cnt++] = [i, 1];
+		}
+		if (cnt) {
+			if (cnt == 1) ll = mv[0];
+			else ll = mv[parseInt(Math.random() * cnt)];
+			
+			maze.stack.push([cl[0],cl[1]]);
+			cl[ll[0]] += ll[1];
+			maze.road[cl[0]][cl[1]] = 1;
+			cl[ll[0]] += ll[1];
+			maze.road[cl[0]][cl[1]] = 1;
+
+			if (cl[0] == maze.size[0] - 1 && cl[1] == maze.size[1] - 1) {
+				maze.stack.push([cl[0],cl[1]]);
+				maze.sol = maze.stack.slice();
+			}
+		} else {
+			var ll = maze.stack.pop();
+			if (!maze.stack.length) break;
+			cl[0] = ll[0];
+			cl[1] = ll[1];
+		}
+	}
+  },
+  draw : function() {
+	var xx = maze.size[0];
+	var yy = maze.size[1];
+	
+	// background
+	canv.width = xx * gs + 1;
+	canv.height = yy * gs + 1;
+	
+	ctx.fillStyle = "black";
+	ctx.fillRect(0,0, canv.width, canv.height);
+
+	for(var x = 0; x <= xx; x++)
+		for(var y = 0; y <= yy; y++)
+			if (maze.road[x][y]) {
+				ctx.fillStyle = "white";
+				ctx.fillRect(x * gs - (gs - 1), y * gs - (gs - 1), gs * 2 - 1, gs * 2 - 1);
+			}
+  },
+  roadDraw : function() {
+	ctx.strokeStyle = 'Red'; 
+	ctx.beginPath();
+	var x = maze.sol[0][0];
+	var y = maze.sol[0][1];
+	ctx.moveTo(x * gs, y * gs);
+	for(var i = 1; i < maze.sol.length; i++) {
+		var x = maze.sol[i][0];
+		var y = maze.sol[i][1];
+		ctx.lineTo(x * gs, y * gs);
+	}
+	var x = maze.size[0];
+	var y = maze.size[1] - 1;
+	ctx.lineTo(x * gs, y * gs);
+	ctx.stroke();
+  }
+}
+
+var canv;
+var ctx;
+var gs = 10;
+var cx = 1;
+var cy = 1;
+function draw() {
+	var x = parseInt(document.getElementById("txtX").value) * 2;
+	var y = parseInt(document.getElementById("txtY").value) * 2;
+	var s = parseInt(document.getElementById("txtS").value) * 2;
+	gs = s;
+	maze.start(x, y);
+	cx = 1;
+	cy = 1;
+	drawPlayer(0, 0);
+}
+
+function road_draw() {
+	maze.roadDraw();
+}
+
+window.onload = function(){
+	canv = document.getElementById("maze");	
+	ctx = canv.getContext("2d");
+
+	draw();
+		
+	document.addEventListener("keydown", keyPush);
+			
+	//gameInterval = setInterval(game, 1000 / 15);
+	//clearInterval(gameInterval);
+}
+
+function keyPush(evt){
+	if (cx == maze.size[1] && cy == maze.size[2] - 1) return;
+	var xv = yv = 0;
+	switch(evt.keyCode){
+	case 37: // left
+		xv = -1;
+		break; 
+	case 38: // up
+		yv = -1;
+		break;
+	case 39: // right
+		xv = 1;
+		break;
+	case 40: // down
+		yv = 1;
+		break;
+	case 13: // enter
+		break;
+	}
+	if (maze.road[cx + xv][cy + yv] == 1) {
+		drawPlayer(xv, yv);
+	}
+}
+
+function drawPlayer(xv, yv) {
+	var t = 4;
+	ctx.lineWidth = 2;
+	ctx.strokeStyle = "white";
+	ctx.strokeRect(cx * gs - t, cy * gs - t, t * 2, t * 2);
+	cx += xv;
+	cy += yv;
+	ctx.strokeStyle = "blue";
+	ctx.strokeRect(cx * gs - t, cy * gs - t, t * 2, t * 2);
+}
+
+
+
+</script>
+
+</body>
+</html>
